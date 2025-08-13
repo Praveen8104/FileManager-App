@@ -477,7 +477,7 @@ export default function HomeScreen() {
 
     const handleUploadFile = async () => {
         try {
-            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: true, multiple: true });
+            const result = await DocumentPicker.getDocumentAsync({ copyToCacheDirectory: false, multiple: true });
             if (result.canceled || !result.assets || result.assets.length === 0) {
                 // User cancelled the picker
                 return;

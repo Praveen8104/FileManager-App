@@ -17,6 +17,7 @@ import {
     Dimensions,
     Switch,
     Image,
+    RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -238,6 +239,7 @@ export default function HomeScreen() {
     const [toast, setToast] = useState({ visible: false, message: '' });
     const [detailsItem, setDetailsItem] = useState(null);
     const [selectedItemsSize, setSelectedItemsSize] = useState(0);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // --- Show Context Menu ---
     const showContextMenu = (item, event) => {
@@ -402,7 +404,8 @@ export default function HomeScreen() {
         setIsLoading(true);
         setDirectoryContent([]);
         try {
-            const result = await FileSystem.readDirectoryAsync(path);
+            let result = await FileSystem.readDirectoryAsync(path);
+            result = result.filter(name => !name.startsWith('.') && name !== 'expo-file-system' && !name.startsWith('RCTAsyncLocalStorage'));
             const itemsWithStats = await Promise.all(
                 result.map(async (name) => {
                     const itemPath = `${path.replace(/\/?$/, '/')}${name}`;
@@ -425,6 +428,12 @@ export default function HomeScreen() {
             setIsLoading(false);
         }
     }, []);
+
+    const onRefresh = useCallback(async () => {
+        setIsRefreshing(true);
+        await readDirectory(currentPath);
+        setIsRefreshing(false);
+    }, [currentPath, readDirectory]);
 
     useEffect(() => {
         if (isAuthenticated && !isGlobalSearch) readDirectory(currentPath);
@@ -980,7 +989,7 @@ export default function HomeScreen() {
                 {/* This is now handled in the header */}
 
                 {/* FILE LIST */}
-                {isLoading ? (
+                {isLoading && !isRefreshing ? (
                     <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
                 ) : (
                     <FlatList
@@ -1003,6 +1012,14 @@ export default function HomeScreen() {
                         contentContainerStyle={styles.listContentContainer}
                         columnWrapperStyle={viewMode === 'grid' ? styles.columnWrapperStyle : null}
                         numColumns={viewMode === 'grid' ? NUM_COLUMNS : 1}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={isRefreshing}
+                                onRefresh={onRefresh}
+                                colors={[COLORS.primary]}
+                                tintColor={COLORS.primary}
+                            />
+                        }
                         ListEmptyComponent={
                             <View style={styles.emptyContainer}>
                                 <Icon name="folder-search-outline" size={80} color={COLORS.textSecondary} />
